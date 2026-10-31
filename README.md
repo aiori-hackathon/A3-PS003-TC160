@@ -18,6 +18,7 @@
 - **Short summary video of the solution:** https://youtu.be/RWwwxcE9wKE
 
 ---
+## Prototype Link - https://aiori-ii6k.vercel.app
 
 ## 1. Executive Summary
 
