@@ -16,6 +16,7 @@
 
 - **Complete presentation of the problem statement:** https://youtu.be/5wjOAO3cRCo
 - **Short summary video of the solution:** https://youtu.be/RWwwxcE9wKE
+- **Prototype explaination:** https://youtu.be/5wjOAO3cRCo
 
 ---
 ## Prototype Link - https://aiori-ii6k.vercel.app
