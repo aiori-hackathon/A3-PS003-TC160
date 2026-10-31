@@ -1,0 +1,19 @@
+{
+  "python_version": "3.10+",
+  "virtual_env": ".venv",
+  "dependencies": [
+    "torch>=2.2.0",
+    "flwr>=1.7.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0"
+  ],
+  "mcp_server": {
+    "name": "colab-fl-worker",
+    "endpoint": "mcp://colab.research.google.com/fedavg-worker",
+    "accelerator": "NVIDIA Tesla T4 GPU",
+    "dataset": "METR-LA",
+    "status": "ready"
+  },
+  "cli_command": "python3 backend/colab_train_cli.py --dataset metr-la --model gru --epochs 2 --rounds 50"
+}

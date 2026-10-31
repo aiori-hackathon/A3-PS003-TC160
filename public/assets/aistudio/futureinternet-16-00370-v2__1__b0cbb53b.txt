@@ -1,0 +1,2393 @@
+future internet
+Article
+
+Advanced Optimization Techniques for Federated Learning on
+Non-IID Data
+Filippos Efthymiadis
+
+, Aristeidis Karras * , Christos Karras *
+
+and Spyros Sioutas
+
+Computer Engineering and Informatics Department, University of Patras, 26504 Patras, Greece;
+st1067529@ceid.upatras.gr (F.E.); sioutas@ceid.upatras.gr (S.S.)
+* Correspondence: akarras@ceid.upatras.gr (A.K.); c.karras@ceid.upatras.gr (C.K.)
+
+Abstract: Federated learning enables model training on multiple clients locally, without the need
+to transfer their data to a central server, thus ensuring data privacy. In this paper, we investigate
+the impact of Non-Independent and Identically Distributed (non-IID) data on the performance of
+federated training, where we find a reduction in accuracy of up to 29% for neural networks trained
+in environments with skewed non-IID data. Two optimization strategies are presented to address
+this issue. The first strategy focuses on applying a cyclical learning rate to determine the learning
+rate during federated training, while the second strategy develops a sharing and pre-training method
+on augmented data in order to improve the efficiency of the algorithm in the case of non-IID data.
+By combining these two methods, experiments show that the accuracy on the CIFAR-10 dataset
+increased by about 36% while achieving faster convergence by reducing the number of required
+communication rounds by 5.33 times. The proposed techniques lead to improved accuracy and faster
+model convergence, thus representing a significant advance in the field of federated learning and
+facilitating its application to real-world scenarios.
+Keywords: federated learning; optimization strategies; non-IID data; deep learning; cyclical learning
+rate; pre-training; augmented data; faster model convergence; IoT; decision making
+
+Citation: Efthymiadis, F.; Karras, A.;
+
+1. Introduction
+
+Karras, C.; Sioutas, S. Advanced
+
+Mobile devices have emerged as the primary computational resource for a vast number of users worldwide, and an even greater number of IoT devices are expected to be
+operational in the coming years. Predictions suggest that by 2025, the global data volume
+will increase to 180 trillion GBs, with approximately 80 billion nodes likely connected to
+the Internet [1]. Machine learning models trained on this massive amount of data have
+the potential to enhance the capabilities of various applications significantly. However,
+enabling such functionalities on mobile devices often requires data to be shared among
+servers on a global scale, necessitating the preservation of data security and privacy and
+the reduction of communication overheads. Consequently, Federated Learning (FL), which
+retains data on the device and shares only the model, has become increasingly attractive.
+Federated Learning (FL) represents a critical development in distributed machine
+learning, as it offers a framework where multiple clients (e.g., mobile phones or organizations) collaborate to train a model under the coordination of a central server while
+keeping the training data local. The most widely used FL algorithm is Federated Averaging
+(FedAvg), which assumes that each client is connected to a server. FedAvg trains the global
+model iteratively, through parallel local model training on clients and aggregation of the
+global model on the server [2]. This approach not only ensures privacy by eliminating the
+need for data exchange but also reduces communication costs, which is crucial given the
+high volume of data managed by these devices.
+Despite its advantages, FL faces several challenges, primarily related to communication efficiency, system heterogeneity, statistical heterogeneity, and privacy concerns [3].
+
+Optimization Techniques for
+Federated Learning on Non-IID Data.
+Future Internet 2024, 16, 370. https://
+doi.org/10.3390/fi16100370
+Academic Editors: Yanhao Wang,
+Michael Sheng and Chengcheng Yang
+Received: 5 September 2024
+Revised: 10 October 2024
+Accepted: 11 October 2024
+Published: 13 October 2024
+
+Copyright: © 2024 by the authors.
+Licensee MDPI, Basel, Switzerland.
+This article is an open access article
+distributed under the terms and
+conditions of the Creative Commons
+Attribution (CC BY) license (https://
+creativecommons.org/licenses/by/
+4.0/).
+
+Future Internet 2024, 16, 370. https://doi.org/10.3390/fi16100370
+
+https://www.mdpi.com/journal/futureinternet
+
+Future Internet 2024, 16, 370
+
+2 of 31
+
+Typically, client data are collected independently and are likely to be Non-Independent
+and Identically Distributed (non-IID), which significantly degrades the performance of
+FedAvg. We show that the accuracy of convolutional neural networks trained with FedAvg
+on strongly non-IID data can drop significantly, by up to 3.1% for the MNIST dataset,
+13.4% for the Fashion MNIST dataset, and 29% for the CIFAR-10 dataset. Addressing these
+challenges is critical to improving the robustness of FL in real-world applications.
+To mitigate these challenges, we propose two practical optimization strategies aimed
+at improving the performance of FL under non-IID conditions. The first strategy focuses on
+applying the Cyclical Learning Rate (CLR) method to dynamically adjust the learning rate
+during the federated training process [4]. The second strategy involves a novel approach for
+data sharing and pre-training on augmented data [5,6]. This method integrates pre-training
+on augmented data and data sharing to enhance the efficiency of the FedAvg algorithm,
+especially in non-IID scenarios. Our experiments demonstrate that these methods can
+increase the accuracy of FL models by 36% on the CIFAR-10 dataset, while also reducing
+the number of required communication rounds by 5.33 times.
+Although Federated Learning (FL) provides a distributed strategy for training models
+that preserve data privacy, most of the existing research focuses on IID (Independent and
+Identically Distributed) data. Still, in the real world, data are usually non-IID, resulting in
+statistical heterogeneity and causing a dramatic drop in the performance of FL algorithms,
+such as FedAvg. Previous studies have tried to manage data heterogeneity using basic
+aggregation methods or data collaboration strategies, but they usually do an inadequate job
+of alleviating accuracy loss or require considerable computational resources. By advancing
+in the area, this study suggests two novel strategies—Cyclical Learning Rate (CLR) and
+pre-training on augmented data—that effectively handle the difficulties posed by non-IID
+data and lead to marked enhancements in convergence speed and communication cost. Our
+process effectively closes this gap by featuring dynamic learning rate adjustments along
+with pre-training on models trained on wide diversified augmented datasets, which shows
+enhanced performance in non-IID scenarios when compared with classic approaches.
+The key contributions of this article can be summarized as follows:
+•
+
+•
+
+•
+•
+
+•
+
+We identify the negative impact of non-IID data on federated learning performance,
+demonstrating that the effectiveness of federated learning is particularly inferior when
+applied to non-IID data compared to IID data.
+We propose an optimization strategy using a cyclical learning rate to adjust the learning
+rate dynamically during the federated training process, with the goal of increasing
+accuracy and achieving faster model convergence.
+We introduce a novel approach for data sharing and pre-training on augmented data
+further to improve the performance of FL under non-IID data conditions.
+We validate our proposed methods through extensive experiments, showing significant improvements in accuracy and convergence speed compared to the baseline
+FedAvg approach with a fixed learning rate.
+This research attempts to contribute to the field by providing new methods for applying federated learning to real-world scenarios, enhancing the efficiency of federated
+learning applications.
+
+The following Section 2, provides an overview of federated learning, including its
+architecture and a detailed explanation of the FedAvg algorithm. Section 3 describes the
+methodology used in this research, including the tools, datasets, data pre-processing, and
+models created. In Section 4, we present our proposed solutions, focusing on the Cyclical
+Learning Rate (CLR) and data sharing with pre-training on augmented data. Section 5
+presents and compares the results of the experiments. Ultimately, in Section 6, we conclude
+the paper by summarizing the key contributions, outlining potential future work, and
+discussing the findings and their implications in real-world federated learning scenarios.
+
+Future Internet 2024, 16, 370
+
+3 of 31
+
+2. Background
+2.1. Federated Learning
+Federated Learning (FL) is a decentralized machine learning approach that allows
+deep learning algorithms to be trained collaboratively across multiple devices or nodes
+without requiring data to be transferred to a central server. Instead, the training occurs
+locally on each device using its own data, which remains on the device, thus preserving
+privacy. The updates to the model parameters (such as weights) are then shared with a
+central server, which aggregates these updates to form a common, improved model that is
+sent back to the devices for further training [2].
+In this process, each participating device performs local training based on its own data
+and then exchanges only the updated model parameters, such as weights and biases, with
+a central server. The server synthesizes the updates from all devices to create an improved
+global model, which is then redistributed to the devices for another round of training. This
+iterative process continues until the model reaches the desired level of performance. The
+key advantage of FL is that it enables the training of a machine learning model without
+ever moving raw data from the devices, making it a crucial method in scenarios where data
+privacy is paramount.
+Federated Learning (FL) emerges as an innovative method that offers an advanced
+alternative to traditional centralized and distributed machine learning. Unlike centralized
+ML, where data are uploaded to a central server, exposing privacy risks, FL keeps data on
+devices, reducing the chances of data breaches. While distributed ML improves scalability
+by independently training models across participants, it still faces issues with synchronization and security during data transmission. FL enhances these models by maintaining
+data privacy and enabling collaborative model training, where only model updates are
+exchanged, ensuring more efficient communication and improved security [7].
+This method is particularly important in domains such as autonomous vehicles [8], traffic
+prediction and monitoring [9,10], healthcare [11–13], telecommunications [14,15], the Internet
+of Things (IoT), smart cities [16–18], industrial management [19–21], blockchain [22–24], and
+medical artificial intelligence. In these fields, data privacy is critical, and the ability to retain
+data on devices while still participating in collaborative learning provides a significant
+advantage [25,26].
+2.2. FedAvg Algorithm
+In Federated Learning (FL), a key component is the aggregation of model parameters
+from the clients into a unified, centrally managed model. The aggregation process must
+ensure that the combined parameters do not negatively impact the model’s accuracy. The
+Federated Averaging (FedAvg) algorithm is perhaps the most widely known aggregation
+algorithm, which computes the weighted average of local model updates based on the sizes
+of the clients’ datasets [2].
+Federated Stochastic Gradient Descent (FedSGD) is the fundamental approach to
+model training in FL, which aims to minimize a loss function across data distributed across
+multiple clients without the need for centralized data collection. Let the loss function
+L(w; x, y) represent the loss over data ( x, y) with parameters w ∈ Rd . The goal of training
+is to find the optimal parameters w∗ that minimize the global objective:
+w∗ = arg minw
+
+1 N
+L(w; xi , yi )
+N i∑
+=1
+
+where N is the total number of clients. During a training round, a predetermined number
+of clients m update their local models using distributed global parameters. These local
+updates are then sent back to the central server, which computes the average of the gradient
+updates to update the global model as follows:
+w t ← w t −1 − α
+
+1 m
+∇ L ( w t −1 ; x i , y i )
+m i∑
+=1
+
+Future Internet 2024, 16, 370
+
+4 of 31
+
+where α is the learning rate. In FedSGD, only one local update is performed per round,
+which can limit communication overhead but also affects training performance depending
+on the heterogeneity and quality of local data [27].
+Federated Averaging (FedAvg) builds on FedSGD by optimizing model performance
+through progressively improving accuracy and reducing communication costs while keeping the data secure and private on each local device. FedAvg allows for multiple computations per client in each round, as clients perform several iterations (epochs) on their
+local data before aggregation. The main parameters of FedAvg include the fraction of
+clients C participating in each round, the number of local passes over the data (epochs)
+E performed by each client in each round, and the local mini-batch size B used for client
+updates. Additionally, the learning rate η and, in some cases, a learning rate decay term λ
+may be introduced [28].
+The FedAvg algorithm proceeds as follows: The global model is initialized randomly.
+In each communication round, the server randomly selects a subset of clients St , where
+|St | = C × K ≥ 1, to participate in training and distributes the current global model wt to
+all clients in St . Each client partitions its local data into batches of size B and performs E
+local epochs of training, applying gradient descent on the current model using its local
+data. The clients send their trained local models wtk+1 back to the server, which then creates
+a new global model wt+1 by computing a weighted sum of all the received local models:
+K
+
+nk k
+w
+n t +1
+k =1
+
+w t +1 ← ∑
+
+where nk is the number of local data points on client k and n is the total number of data
+points across all clients. This process continues iteratively until convergence. The detailed
+steps that the Federated Averaging (FedAvg) method follows, are given in Algorithm 1.
+Algorithm 1 Federated Averaging (FedAvg)
+1: Server executes:
+2: Initialize w0
+3: for each round t = 1, 2, . . . do
+
+m ← max(C · K, 1)
+St ← (random set of m clients)
+for each client k ∈ St in parallel do
+wtk+1 ← C LIENT U PDATE(k, wt )
+end for
+m t ← ∑ k ∈ St n k
+nk k
+10:
+w t +1 ← ∑ k ∈ St m
+w t +1
+t
+11: end for
+4:
+5:
+6:
+7:
+8:
+9:
+
+12: ClientUpdate(k, w): {Run on client k}
+13: B ← (split Pk into batches of size B)
+14: for each local epoch i from 1 to E do
+15:
+for each batch b ∈ B do
+16:
+w ← w − η ∇ℓ(w; b)
+17:
+end for
+18: end for
+19: return w to server
+
+The FedAvg algorithm enhances model performance and communication efficiency
+compared to FedSGD by allowing clients to perform multiple updates before aggregation.
+If B = ∞, the local dataset is treated as a single mini-batch, and if B = ∞ and E = 1,
+FedAvg corresponds exactly to FedSGD. Additionally, for a client with nk local examples,
+the number of local updates per round is given by uk = nBk [2].
+Over time, variations in FedAvg have been developed to address specific cases and
+optimize performance under various conditions. Personalized variations in FedAvg, such
+
+Future Internet 2024, 16, 370
+
+5 of 31
+
+as Personalized Federated Averaging (Personalized FedAvg), have been developed to
+tailor models to the specific requirements of each user. This method leverages metalearning techniques to adapt the models to the local data characteristics of each client,
+thereby offering improved performance in personalized use cases [29]. Another significant
+variation is FedProx, which introduces an additional regularization term in the local cost
+functions to limit the deviation of local models from the global model, thus addressing the
+issue of model divergence due to the heterogeneous distribution of data among clients [30].
+2.3. Learning Rate Policies
+The learning rate is one of the most critical hyperparameters in training neural networks. This parameter determines the step size at which the neural network adjusts its
+weights in each iteration of the training process to minimize the network’s loss function.
+Selecting an appropriate learning rate is crucial for the model’s fast and efficient convergence to the minimum of the loss function. A high learning rate can cause the model to take
+excessively large steps, potentially leading to instability and overshooting the minimum.
+Conversely, a very low learning rate makes convergence slow due to the small updates to
+the network’s weights, increasing the risk of the model getting stuck in local minima.
+The choice of an appropriate learning rate policy is essential for the efficient training of
+neural networks, as the learning rate directly impacts the speed and stability of the model’s
+convergence. Three popular policies that have been extensively used are the fixed learning
+rate, decaying learning rate, and cyclic learning rate [31].
+•
+
+•
+
+•
+
+Fixed Learning Rate (Fixed LR): This is the simplest learning rate policy, where a fixed
+value is used throughout the entire training process. While easy to implement, this
+approach often proves less effective in more complex models, where the demands for
+weight adjustments change as the network learns.
+Decaying Learning Rate (Decaying LR): This popular strategy involves gradually
+decreasing the learning rate as training progresses. The gradual reduction helps better
+approximate the minimum of the loss function by avoiding drastic weight changes
+that could lead to instability. Depending on the predefined method for adjusting the
+learning rate, common decaying strategies include time-based decay, step decay, and
+exponential decay.
+Cyclic Learning Rate (Cyclic LR): This is an innovative approach where the learning
+rate oscillates between a minimum and a maximum threshold on a cyclic basis. This
+method allows the network to explore the parameter space more effectively and
+avoid local minima, improving the overall performance and stability of the learning
+process [4].
+
+2.4. Data Augmentation
+Data augmentation is a crucial process in training deep neural networks, which helps
+increase the quantity and variety of training data, ultimately improving the performance
+of the models. By applying data augmentation techniques, we can address the issue of
+overfitting and enhance the model’s ability to generalize to new, unseen data. This is
+achieved by generating new, synthetic data that are slightly different variations of the
+original data.
+For image data, common data augmentation techniques include geometric transformations, color transformations, and the introduction of noise. Geometric transformations
+involve altering the spatial properties of the images, such as rotation, flipping, cropping,
+and shifting, to create new versions of an image from different angles and orientations.
+Color transformations modify the color properties of the images, including changes in
+brightness, contrast, saturation, and hue, simulating different lighting conditions, and
+increasing the diversity in color. Lastly, adding random noise helps models become more
+robust to potential imperfections and lower-quality images [32].
+For improving model performance and achieving greater fairness, addressing data
+heterogeneity and class imbalance across distributed clients is important in Federated
+
+Future Internet 2024, 16, 370
+
+6 of 31
+
+Learning (FL). New data augmentation techniques have arisen to deal with these difficulties while still safeguarding data privacy. Methods such as Federated Augmentation
+(FAug) allow clients to share generative models instead of original data, which produces
+synthetically generated data that facilitates the balancing of class distributions [33]. Among
+other methods, Federated Generative Adversarial Networks (FedGAN) permit clients to
+collectively train GANs to develop an assortment of synthetic data, strengthening the global
+model’s learning potential without any compromises on privacy [34]. The approach known
+as FedMix uses the data augmentation technique Mixup to minimize data heterogeneity
+and improve model robustness within the framework of federated learning [35]. On top of
+that, techniques such as federated distillation deal with non-IID data problems by enabling
+clients to participate by sharing model outputs (logits) instead of model parameters or
+raw data, which boosts the performance of the global model and protects privacy [36–38].
+The use of these new data augmentation strategies is critical in addressing the restrictions
+resulting from non-IID and imbalanced data in FL models and applications.
+Ultimately, data augmentation is a valuable tool in machine learning, especially in
+applications where the available data are limited or when the goal is to increase the diversity
+of the dataset, as often happens in federated learning scenarios. By using these techniques,
+we can ensure that the models are exposed to a wider range of data variations, leading to
+improved generalization and robustness in real-world applications.
+2.5. Pre-Training
+Model pre-training in deep learning is a powerful technique that enhances performance and accelerates the convergence of neural networks. This process occurs prior to the
+actual training phase and helps in preparing the models by allowing them to gain a basic
+understanding of the data’s features before they are applied to specific training data for
+further specialization. Pre-training is especially useful in applications such as federated
+learning, where available data may be limited or insufficient.
+According to research [39], pre-training can lead to significant improvements in neural
+network performance, enabling the models to discover features more effectively and adapt
+better to new, unexplored data. It has been found that pre-training can provide more
+efficient initialization of the network’s weights, encouraging the acquisition of useful
+representations that facilitate the learning of complex data structures. In addition to
+performance improvements, pre-training reduces the risk of overfitting by increasing the
+robustness of the models, as they are exposed to a broader range of data.
+This technique has been shown to improve the resilience and accuracy of models in
+various challenges, such as adversarial perturbations. Pre-trained models on large and
+diverse datasets, such as ImageNet, have demonstrated significant improvements in both
+resistance to adversarial attacks and prediction accuracy compared to models trained from
+scratch [40].
+In the context of federated learning, model pre-training becomes even more valuable
+as it can significantly enhance the performance of FL models by providing a strong knowledge base that facilitates faster convergence and improved final model performance [5].
+Specifically, it addresses some of the challenges related to the instability of federated training in scenarios with non-IID data across client devices. This helps the models require fewer
+training iterations to achieve comparable or superior performance, making FL more feasible
+and efficient even in environments with limited computational resources. Additionally,
+this approach reduces the need for extensive data communication between devices and the
+central server, lowering communication costs and enhancing data privacy protection.
+Model pre-training is proven to be a powerful technique for boosting deep learning
+in both conventional applications and federated learning. Its ability to improve model
+generalization, reduce overfitting, and accelerate training makes pre-training an essential
+process in the development of neural networks.
+
+Future Internet 2024, 16, 370
+
+7 of 31
+
+2.6. Adaptive Optimizers
+In federated learning, particularly when dealing with non-IID data distributions,
+selecting an effective optimization strategy is crucial for ensuring efficient and stable model
+convergence. While this study focuses on the use of Cyclical Learning Rate (CLR) and
+pre-training on augmented data, it is important to discuss alternative approaches, such as
+adaptive optimizers, to provide a comprehensive justification for the methods chosen.
+One of the primary challenges in federated learning on non-IID data is the heterogeneity of data distributions across clients, which can slow convergence and degrade global
+model performance. Adaptive optimizers like Adagrad [41] and Adam [42] have been
+proposed to address these issues by dynamically adjusting the learning rate based on
+gradient information. These methods compute learning rates for individual parameters
+using historical gradient data, which helps stabilize training in environments with noisy or
+non-stationary data.
+Adagrad, introduced by Duchi et al. [41], adapts the learning rate for each parameter
+by accumulating past squared gradients, allowing it to perform well on sparse or infrequently updated features. This makes Adagrad particularly effective in non-stationary
+learning environments where certain parameters may need larger updates than others.
+However, a known limitation of Adagrad is that the learning rate continually decays, which
+can slow down training in later stages. Adam, developed by Kingma and Ba [42], builds on
+Adagrad by incorporating momentum, where both the first moment (mean of gradients)
+and second moment (uncentered variance of gradients) are used to adapt learning rates.
+This combination provides more accurate and stable parameter updates, making Adam
+one of the most widely used optimizers in machine learning. In centralized settings, Adam
+has shown fast convergence, especially in tasks with non-stationary objectives.
+However, in federated learning, particularly under non-IID conditions, the performance of adaptive optimizers like Adam is less consistent. These adaptive optimizers
+often require accumulating momentum [43] of the previous gradient information for the
+model update, which may double the uploading communication costs in FL. This is because
+model training is performed only on local devices and the accumulated gradients (with the
+same size as the model parameters) also need to be uploaded to the server for aggregation.
+Research by Li et al. [44] discusses the bias introduced by pseudo-gradients in Adam when
+applied in federated environments. In non-IID settings, local updates are aggregated at the
+server without proper normalization, leading to an unfair bias toward updates from certain
+clients. This bias can slow down convergence and reduce the fairness of the global model.
+Furthermore, the paper shows that FedAdam (Adam applied in federated learning) suffers
+from convergence loss due to the mismatch between local client objectives and the global
+objective function, particularly in heterogeneous data environments. These issues can
+result in suboptimal performance and highlight the challenges of using Adam in federated
+learning [44].
+In contrast, the Cyclical Learning Rate (CLR) strategy, proposed by Leslie N. Smith [4],
+offers significant advantages for federated learning on non-IID data. Unlike adaptive
+optimizers, CLR oscillates the learning rate between minimum and maximum values,
+preventing the model from getting trapped in local minima, which is a common issue with
+biased or skewed data subsets. This cyclical pattern alternates between exploration and finetuning phases, leading to more balanced global updates and improved generalization across
+diverse client distributions. Prior research highlights CLR’s effectiveness in enhancing
+convergence and performance in non-IID federated learning environments [4].
+Additionally, CLR practically eliminates the need to tune the learning rate yet achieve
+near-optimal classification accuracy. While adaptive optimizers, like Adam, require careful
+adjustment of multiple parameters, including learning rate, beta values (for momentum),
+and epsilon (for numerical stability), CLR only requires specifying the minimum and
+maximum learning rate boundaries. These boundaries can be efficiently determined using
+a Learning Rate Range Test (LRRT), which empirically identifies the optimal range for the
+learning rate based on model performance during an initial short training phase [4]. This
+
+Future Internet 2024, 16, 370
+
+8 of 31
+
+simplicity is particularly beneficial in federated learning, where client devices may have
+limited computational resources, and minimizing communication overhead is a priority.
+The use of pre-training on augmented data helps to initialize the model with strong
+feature representations before federated training begins, by providing a strong knowledge
+base that facilitates faster convergence and improved final model performance, mitigating
+the effects of data heterogeneity across clients [5]. When combined with CLR, pre-training
+accelerates convergence by providing a stable starting point and reduces the number of
+communication rounds needed to reach optimal performance. In summary, while adaptive
+optimizers face challenges in federated learning with non-IID data due to biases introduced
+by pseudo-gradients and heterogeneity in local updates, implementing pre-training with
+CLR offers a more robust approach to improving model accuracy and convergence.
+3. Methodology
+3.1. Tools and Datasets
+In this study, the implementation of the federated learning system was supported by
+a set of cutting-edge tools, selected for their efficiency, flexibility, and broad community
+support. These tools include Google Colab for code development and execution, TensorFlow for building and training machine learning models, TensorFlow Federated (TFF) for
+implementing federated learning, and Apache Spark (PySpark) for data pre-processing
+and partitioning.
+•
+
+•
+
+•
+
+•
+
+Google Colab: A cloud-based development environment provided by Google, designed for machine learning and data science research. It is based on Jupyter Notebook
+and provides free access to CPU and GPU resources, allowing users to write and execute Python code through their browser [45].
+TensorFlow: An open-source software library developed by Google for numerical
+computation and machine learning. It facilitates the creation and training of neural
+networks, offering a wide array of libraries and tools, making it a leading tool in
+artificial intelligence and scientific research.
+TensorFlow Federated (TFF): An open-source framework that extends TensorFlow,
+specifically designed for federated learning. TFF allows machine learning models to be
+trained on decentralized data while ensuring data privacy and security. It includes two
+main APIs: the Federated Core (FC) API for low-level distributed computation and the
+Federated Learning (FL) API for high-level federated training and evaluation [46,47].
+Apache Spark (PySpark): Apache Spark is an open-source framework that serves
+as a powerful tool for processing and analyzing large datasets in distributed environments. Spark supports multiple programming models and APIs, including the
+Resilient Distributed Dataset (RDD) and DataFrame API, allowing users to perform
+data processing and analysis tasks in a simple and optimized manner. PySpark is the
+Python API for Spark, enabling users to leverage all the capabilities of Spark through
+the Python programming language [48].
+
+The selection of datasets for training and evaluating models in federated learning is
+crucial for understanding the behavior and performance of these models in environments
+with highly non-IID data. For the implementation of our experiments, three datasets were
+used: MNIST, Fashion MNIST, and CIFAR-10. These datasets were chosen to demonstrate
+the impact of IID and non-IID data distribution in federated learning environments and to
+address the challenges posed by non-IID data effectively.
+•
+
+MNIST: The MNIST (Modified National Institute of Standards and Technology)
+dataset is a comprehensive collection of handwritten digits, consisting of a training set
+of 60,000 examples and a test set of 10,000 examples. The dataset includes grayscale
+images of handwritten digits, each of size 28 × 28 pixels, normalized and centered
+in a 28 × 28 grid. MNIST is widely used for training and testing machine learning
+algorithms, particularly for image classification tasks using Convolutional Neural
+Networks (CNNs), Support Vector Machines (SVMs), and other machine learning
+
+Future Internet 2024, 16, 370
+
+9 of 31
+
+•
+
+•
+
+algorithms. Its simple and well-organized structure makes MNIST a foundational tool
+for researchers in machine learning and computer vision [49].
+Fashion MNIST: The Fashion MNIST dataset is a modern and more challenging
+alternative to the traditional MNIST, consisting of images representing various clothing
+items. It contains 70,000 grayscale images, each 28 × 28 pixels, categorized into
+10 classes, with 60,000 for training and 10,000 for testing. Similar to MNIST, the dataset
+includes fields for the image and corresponding label. The diversity of clothing items,
+coupled with their similarities, introduces a greater level of complexity, testing the
+generalization capabilities of machine learning models [50].
+CIFAR-10: The CIFAR-10 dataset, developed by the Canadian Institute For Advanced
+Research (CIFAR), contains 60,000 color images, each of size 32 × 32 pixels, divided
+into 10 categories, with 6000 images per category. These categories include airplanes,
+automobiles, birds, cats, deer, dogs, frogs, horses, ships, and trucks. The training set
+consists of 50,000 images, while the test set includes 10,000 images. CIFAR-10 offers
+higher-resolution and more complex images compared to MNIST and Fashion MNIST,
+providing a basis for evaluating the performance of more sophisticated and deeper
+neural networks [51].
+
+3.2. CNN Models
+This section presents the architectures of the Convolutional Neural Networks (CNNs)
+applied for federated learning on three different datasets: MNIST, Fashion MNIST, and
+CIFAR-10. Each architecture is specifically designed to meet the unique challenges of its
+respective dataset.
+•
+
+•
+
+•
+
+MNIST: The CNN model for the MNIST dataset starts with a reshape layer to convert
+images from 1D vectors of 784 elements into 28 × 28 × 1 tensors. It includes two
+convolutional layers with 5 × 5 filters (10 and 20 filters, respectively), each followed by
+a 2 × 2 max-pooling layer. A flattened layer then converts the features into a 1D vector,
+which connects to a dense layer with 50 neurons. The model ends with an output
+layer of 10 neurons, representing the 10 classes of digits (0–9) in MNIST. The softmax
+activation function is used to produce a probability distribution across the classes.
+Fashion MNIST: The CNN model for the Fashion MNIST dataset follows a similar
+approach to that of MNIST but with increased depth, reflecting the added complexity
+of the images. This model uses three convolutional layers with 16, 32, and 64 filters
+of size 5 × 5. Max-pooling layers with 2 × 2 windows are applied after the first two
+convolutional layers, and another pooling layer follows the last convolutional layer.
+This arrangement enhances the model’s ability to identify the more intricate features in
+Fashion MNIST images. After flattening the output, the model includes a dense layer
+with 64 neurons, followed by a softmax output layer with 10 neurons, corresponding
+to the 10 different clothing categories.
+CIFAR-10: The CNN model for the CIFAR-10 dataset is designed to address the
+challenge of processing higher-resolution color images (32 × 32 pixels). It begins with
+a reshape layer that converts the 1D vectors of 3072 elements into 32 × 32 × 3 tensors.
+This is followed by three convolutional layers with 32, 64, and 64 filters of size 3 × 3.
+Two 2 × 2 max-pooling layers are included after the first and second convolutional
+layers to reduce complexity. The features are then flattened into a 1D vector, which
+feeds into a fully connected layer with 64 neurons. The model concludes with a
+softmax output layer of 10 neurons, representing the 10 CIFAR-10 classes.
+
+Across all these models, ReLU (Rectified Linear Unit) was chosen as the activation
+function due to its ability to introduce non-linearity effectively, while simplifying computations by zeroing out negative values, thus making the models more efficient for training
+complex image patterns. Sparse categorical cross-entropy was used as the loss function,
+which is well-suited for multi-class classification problems where each sample belongs
+to only one of the available classes, and the model must determine the correct class. The
+optimizer chosen was Stochastic Gradient Descent (SGD), which was valued for its sim-
+
+Future Internet 2024, 16, 370
+
+10 of 31
+
+plicity and effectiveness in image classification tasks. This optimizer iteratively adjusts the
+model’s weights based on the gradient of the loss function, improving the model’s accuracy
+over time.
+Each model is tailored to its dataset, highlighting the versatility of CNNs in imageprocessing tasks and the importance of selecting the right hyperparameters, especially in
+federated learning environments.
+3.3. Pre-Processing
+Data pre-processing is a crucial step in the machine learning process, as the quality
+and accuracy of the final model heavily depend on the quality of the input data. This
+process involves techniques such as data cleaning, normalization, transformation, and
+feature extraction, with the goal of transforming raw data into a more structured and clean
+format that is easier to process and understand by machine learning models.
+1.
+
+2.
+
+3.
+4.
+
+The first step involves loading the data from CSV files into Spark DataFrames using
+the spark.read.csv function. The data consist of multiple columns representing the
+pixel values of the images and one column representing the label of the image.
+The next phase is to convert the pixel columns into a single feature vector for each
+image. This is done using the VectorAssembler tool in PySpark, which consolidates
+the pixel values into a unified vector for easier processing and analysis by machine
+learning models.
+Following this, the pixel values are normalized to a range between 0 and 1 using the
+MinMaxScaler. This normalization improves the model’s convergence during training.
+The final stage of pre-processing involves transforming sparse vectors (SparseVectors)
+into dense vectors (DenseVectors). This transformation is necessary because working with sparse tensors in TensorFlow Federated (TFF) is more complex than using
+dense tensors.
+
+In summary, the pre-processing workflow in PySpark for the MNIST, Fashion MNIST,
+and CIFAR-10 datasets includes creating a unified feature vector, normalizing the values,
+and converting sparse vectors to dense vectors, optimizing data preparation for federated learning.
+3.4. Data Partitioning
+The method of partitioning data among clients in Federated Learning (FL) is critical, as
+it directly impacts the efficiency and accuracy of the learning models. Simulating different
+data distribution scenarios, such as IID (Independent and Identically Distributed) and
+Non-IID, is essential for understanding and addressing real-world challenges in federated training.
+In IID partitioning, the data are distributed to ensure that each client receives a
+balanced subset of data, reflecting the overall class distribution of the entire dataset.
+Specifically, for the MNIST and Fashion MNIST datasets, the data are distributed among
+1000 clients, with each client receiving 6 images per class, for a total of 60 images. For
+CIFAR-10, the partitioning involves 500 clients, with each client receiving 100 images,
+evenly distributed across the 10 classes, resulting in 10 images per class. This method of
+partitioning facilitates smoother and more balanced training, as information from all classes
+is available to each client.
+On the other hand, non-IID partitioning represents a more realistic approach, where
+the data are unevenly distributed, and each client receives data corresponding to only a
+few classes. For the MNIST and Fashion MNIST datasets, each of the 1000 clients receives
+60 images from only two classes, with 30 images from each class. For CIFAR-10, a similar
+pattern is followed, with 500 clients, where each client receives 100 images from only
+two distinct classes, with 50 images from each class. This strategy simulates real-world
+scenarios where data distribution is not uniform, reflecting the diversity of devices in a
+federated network.
+
+Future Internet 2024, 16, 370
+
+11 of 31
+
+After pre-processing and partitioning the dataset among the clients, the data are stored
+in Parquet format files, which are optimized for efficient storage and fast data retrieval. The
+data are partitioned based on the client identifier, ensuring effective data organization and
+management for the federated learning process.
+The choice of data partitioning in federated learning allows for the simulation of
+different scenarios. IID partitioning ensures uniform class distribution among clients, while
+non-IID partitioning reflects the reality of more complex and uneven data distribution. By
+analyzing and comparing federated learning models trained on both IID and non-IID data,
+this study aims to improve the performance of federated training by providing solutions to
+the challenges posed by data heterogeneity.
+4. Proposed Approach
+4.1. Federated Learning with Fixed Learning Rate
+This section focuses on implementing and evaluating the Federated Averaging (FedAvg) algorithm across different data partitioning scenarios, specifically examining its
+performance under both IID (Independent and Identically Distributed) and non-IID data
+distributions among clients. For this purpose, three datasets, MNIST, Fashion MNIST, and
+CIFAR-10, were used, and different Convolutional Neural Networks (CNNs) were implemented for each dataset, as described in Section 3.2. The goal is to observe the behavior of
+FedAvg when training CNN models with Stochastic Gradient Descent (SGD) using a fixed
+learning rate in environments with strongly non-IID data compared with more balanced
+(IID) distributions.
+To simulate the federated learning environment, the datasets were partitioned into
+clients using Apache Spark, as discussed in Section 3.3, and all federated learning algorithm
+implementations were carried out using TensorFlow and TensorFlow Federated.
+The implementation of the FedAvg algorithm with a fixed learning rate followed
+these steps:
+1.
+
+2.
+3.
+
+4.
+
+5.
+
+6.
+
+Client Selection: At the beginning of each training round, the server randomly selects
+a subset of the available clients based on specific criteria such as availability and Wi-Fi
+connection stability. These selected clients participate in the current training round.
+Model Broadcast: The selected clients receive the current global model weights from
+the server, distributed via the tff.federated_broadcast function.
+Local Training: Each selected client trains the model locally using its own data. Clients
+use the tff.learning.Model and tf.GradientTape to compute gradients on their
+batches of data and update the model weights through the client optimizer, which, in
+this case, is SGD with a fixed learning rate.
+Aggregation of Updates: After local training, the clients send their model updates,
+which include the changes in weights calculated during local training, back to the
+server. This aggregation is handled by the tff.federated_aggregate function, which
+combines the client updates on the server.
+Global Model Update: Once the server receives all the client updates, it computes
+a federated average by weighing each client’s contribution based on the number of
+images used in the training. The server then updates the global model by averaging
+the client weights, ensuring that each client’s contribution is proportional to the size
+of their dataset.
+Repeat: This process is repeated for a predetermined number of training rounds.
+
+After each training round, the global model is evaluated using the test dataset of
+each corresponding dataset used. This evaluation process is repeated after every round,
+allowing us to monitor the accuracy of the model throughout the training process in both
+IID and non-IID scenarios.
+4.2. Federated Learning with Cyclical Learning Rate
+To enhance the performance of the Federated Averaging (FedAvg) algorithm, we
+explore the application of the Cyclical Learning Rate (CLR) strategy within the context of
+
+Future Internet 2024, 16, 370
+
+12 of 31
+
+Federated Learning (FL), particularly in scenarios involving non-IID data. By replacing the
+traditional approach of using a fixed learning rate, we investigate how dynamically adjusting the learning rate in cycles can optimize model performance and improve convergence.
+The concept of cyclical learning rate, introduced by Leslie N. Smith in [4], suggests
+that a cyclical learning rate policy can improve accuracy without the need for manual
+learning rate tuning. This approach allows the learning rate to oscillate between a specified
+minimum and maximum value, helping the model to escape local minima and converge to
+better solutions.
+Non-IID data cause significant gradient variability during local updates due to the
+imbalance in data distributions across clients. In such scenarios, some clients may have data
+focused on a small subset of classes, while others may have data from completely different
+classes. Therefore, each client, optimizes the model based on different objectives, causing
+weight divergence, a phenomenon where local models diverge from each other and the
+global model after each communication round. As demonstrated by Zhao et al. (2018) [6],
+due to this weight divergence, the skewed data across clients can lead to significant performance degradation. In contrast, in IID settings, the client data distributions are similar,
+resulting in more aligned gradient updates across clients, leading to smoother convergence.
+However, in non-IID settings, the gradients push the global model in different and often
+conflicting directions, causing instability and slower convergence. Moreover, the study [52],
+highlights that as the degree of heterogeneity increases, gradient conflicts become more
+pronounced, which amplifies this divergence and further degrades convergence.
+As a result of this variability, we can run into several issues, including local overfitting
+and the skewed role of local models in building one global model. Some challenges and
+issues are:
+•
+
+•
+
+•
+
+•
+
+•
+
+•
+
+In federated learning (FL), non-IID data can critically degrade performance and converge [53]. The non-IID case means that the data of each client’s datasets may highlight
+different patterns, so the gradients in local training will be divergent. Experiments
+with highly skewed data performed with neural networks show that this divergence
+can lower the accuracy of the global model by up to 55% in some cases [6].
+It also increases communication overhead and has non-IID data that will yield an
+imbalance in class distributions, which could further impact the convergence and
+performance of FL. Non-IID data can not only introduce bias but also slow down
+convergence, regardless of whether batch normalization is used, because the local and
+global statistical parameters do not align [54].
+More importantly, non-IID data cause fluctuations in historical gradient information,
+which then results in inconsistent convergence. This is why techniques such as
+federated gradient scheduling have been suggested for dealing with these challenges
+by creating IID gradient sets for more stable updates [55].
+Local Overfitting: Clients with other distributions of data are likely to overfit their
+local models, which, when assembled form the global model, will perform poorly.
+For example, the simple task of evaluating the performance of multi-modal models
+concerning uni-modal models showed that the former may be more harmful as a
+result of this overfitting [56].
+Skewed Contributions: When the clients hold different distributions of data, some
+of the clients contribute to the global model than others, thus distorting the learning
+process. Consequently, this can intensify the problems associated with the convergence
+and, in general, the entire model’s efficiency [57].
+These challenges are addressed by proposing strategies of data sharing, optimal node
+selection, and new aggregation schemes to reduce accuracy and convergence time [58].
+
+Therefore, complexities arising from non-IID datasets include gradient variations
+throughout training for the very reasons that such datasets are heterogeneous, samples in
+non-IID datasets are inherently correlated, and the potential for class imbalance. It is also
+important to understand these dynamics to design measures for stabilizing corresponding
+training processes and increasing the quality of models for application to such datasets.
+
+Future Internet 2024, 16, 370
+
+13 of 31
+
+As a result, we suggest applying the Cyclical Learning Rate (CLR), which is an adaptive
+learning rate technique in which the learning rate oscillates between some minimum and
+maximum values, which was presented by Smith et al. in [4]. Our proposal CLR enabled
+the model to periodically leap to larger learning rates, useful in escaping certain local
+minima or tackle points that could be caused by non-IID clients’ non-uniform gradient
+updates. Also, low learning rates are particularly useful to provide more stable convergence
+to the model while fine-tuning. This approach serves to eliminate direction oscillation
+that causes limited contribution, which, in turn, helps in the convergence of the model
+to the right solution through high variance reduction over different gradients and high
+generalization over different distributions of data.
+Furthermore, CLR does not require a great number of hyperparameters and adapts
+the learning rate with cycles, which lets us achieve both exploration (large learning rates)
+and exploitation (small learning rates). From the experimental evidence also supported in
+Section 5, it has been shown that incorporating CLR in federated learning on non-IID data
+has the advantage of increased model accuracy and smaller communication rounds than
+the use of the fixed learning rate.
+The state-of-the-art FL and IoT for the large-scale systems, namely FLIBD [59], TinyML
+algorithms [60], and distributed Bayesian inference classifiers [61], ensures enhanced
+privacy-preservation, improved efficiency of big data management, and scalability in
+decentralized systems. Also, federated edge intelligence and edge caching methods have
+introduced new optimization techniques in resource-limited and non-IID data settings [62].
+To determine the appropriate learning rate boundaries, we utilized the Learning Rate
+Range Test (LRRT). This method involves gradually increasing the learning rate over a
+brief training period while monitoring the model’s loss. The evaluation loss is then plotted
+against the learning rate, and two key points are identified: the learning rate where the loss
+starts decreasing and the learning rate where the loss begins to plateau or increase. These
+two values serve as the minimum and maximum learning rate boundaries for the cyclical
+learning rate policy.
+Various CLR policies have been explored, including triangular, triangular2, and
+exp_range. These policies differ in how the learning rate changes within each cycle:
+•
+•
+•
+
+Triangular: the learning rate increases linearly during the first half of the cycle and
+decreases linearly during the second half.
+Triangular2: similar to triangular, but the difference in the learning rate is halved at
+the end of each cycle.
+Exp_range: the learning rate oscillates between the minimum and maximum values,
+with each boundary value decaying by an exponential factor.
+
+The cycle length is determined by the number of rounds required to complete a
+full oscillation from the minimum to the maximum learning rate and back again. Leslie
+N. Smith recommends running for four or more cycles, as this generally yields better
+performance. Also, it is suggested to stop training at the end of a cycle, which is when the
+learning rate is at the minimum value and the accuracy peaks [4].
+For our experiments, we implemented the triangular policy. The following is a TensorFlow code snippet that calculates the cyclical learning rate using the triangular policy:
+cycle = tf.floor(1 + (current_round) / (2 * step_size))
+x = tf.abs((current_round) / (step_size - 2 * cycle + 1))
+clr = min_lr + (max_lr - min_lr) * tf.maximum(0.0, (1.0 - x))
+where:
+•
+•
+•
+
+current_round: represents the current training round in the federated learning process.
+min_lr: The minimum learning rate determined from the learning rate range test,
+below which the learning rate does not drop.
+max_lr: The maximum learning rate determined from the learning rate range test,
+above which the learning rate does not rise.
+
+Future Internet 2024, 16, 370
+
+14 of 31
+
+•
+
+step_size: Defines half the length of a cycle in terms of the number of rounds. The
+learning rate increases from min_lr to max_lr during the first step_size rounds, then
+decreases back to min_lr during the next step_size rounds, completing a full cycle.
+
+In our implementation, the model is trained for a total of 200 rounds, with the step_size
+set to 25 to ensure the completion of four cycles during the federated learning process.
+To integrate the cyclical learning rate, we introduced a modification to the FedAvg
+algorithm architecture described in Section 4.1, specifically during the local training phase
+of the model on the clients. At this stage, each selected client now uses the current cyclical
+learning rate, alongside its local data and the model weights received from the server
+to compute a local model update. This process is executed on each client through the
+tff.federated_map function, which applies a client_update_fn_clr function. This function takes the client’s data, the current model weights, and the current learning rate as
+input and returns the updated weights after local training.
+4.3. Federated Learning with Data Sharing and Pre-Training on Augmented Data
+To more effectively address the challenges posed by non-IID data in federated learning,
+we propose another strategy that combines pre-training the global model on augmented
+data and sharing a small, balanced subset of data among all clients. This strategy aims to
+mitigate the significant accuracy degradation observed in neural networks trained on highly
+heterogeneous data by providing a strong starting point for model training. Additionally,
+we apply the Cyclical Learning Rate (CLR) strategy in conjunction with this pre-training
+and data-sharing approach to further enhance the model’s generalization capabilities in
+non-IID environments.
+Our strategy is inspired by insights from previous studies [5,6]. Specifically, in [5], it is
+highlighted that pre-training, either with synthetic or decentralized client data, improves
+the performance of Federated Learning (FL) models by reducing the accuracy gap between
+FL and centralized learning, while also stabilizing global aggregation, especially in scenarios with non-IID client data. Furthermore, in [6], it is proposed that by creating a small
+balanced subset of data, training a warm-up model on this subset, and then distributing
+both the pre-trained model and a portion of the data to clients can help overcome the
+challenges of data heterogeneity in FL.
+Building on these insights, we developed a combined approach to improve the performance of FedAvg in non-IID data scenarios.
+To implement the proposed strategy, we followed these steps:
+1.
+
+2.
+
+3.
+
+Creation of a Balanced Data Subset: The strategy begins by selecting a balanced
+subset of the CIFAR-10 dataset. Specifically for this implementation, 10,000 images
+are selected to uniformly represent all 10 classes of CIFAR-10 (1000 images per class).
+The remaining 40,000 images are distributed in a non-IID manner among 500 clients,
+with each client receiving 80 images from two distinct classes (40 from each class).
+Distribution of the Balanced Subset Among Clients: Next, a portion of the balanced
+subset is randomly distributed to individual clients. Each client is provided with 0.2%
+of the balanced subset of 10,000 images (20 random images), thus increasing each
+client’s dataset to 100 images. These 20 images are randomly distributed to each client
+without adherence to IID or non-IID partitioning methods.
+Data Augmentation: Then, multiple data augmentation techniques are applied to this
+balanced subset. These techniques aim to increase the diversity of the training data
+and include:
+•
+
+•
+
+Random Crop with Padding: Adds padding to the original images with a
+random margin between 3 and 7 pixels followed by random cropping to a
+32 × 32 pixel area. This method introduces spatial variation in the dataset, helping the model recognize objects despite positional changes.
+Horizontal Flip: Reflects the image along its vertical axis, effectively increasing
+the dataset size and improving the model’s ability to recognize objects regardless
+of horizontal orientation.
+
+Future Internet 2024, 16, 370
+
+15 of 31
+
+•
+
+•
+
+•
+
+4.
+
+5.
+
+Original Image
+
+Crop with Padding
+
+Brightness and Contrast Adjustment: Randomly adjusts pixel values within a
+predefined range (0.8 to 1.2) to simulate different lighting conditions, enhancing
+the model’s robustness to variations in lighting.
+Random Rotation and Scaling: Applies random rotations between −15 and
+15 degrees and scaling images within a range of 0.8 to 1.2. This prepares the
+model to handle objects at various angles and sizes.
+Random Noise: Adds random pixel values ranging from 8 to 15 to simulate
+lower-quality images, increasing the robustness of the model in real-world scenarios where perfect image conditions are not always guaranteed.
+
+Through the application of these augmentation techniques, as illustrated in Figure 1,
+an augmented dataset is created, enriched with a broad range of variations of the
+images from the balanced subset of CIFAR-10. This increased diversity in the training
+data is critical for developing a robust model capable of generalizing to unseen data,
+which is particularly crucial in federated learning environments with non-IID data
+across clients.
+Pre-Training of the Global Model: After augmentation, the global model is pretrained on the set of 50,000 augmented images. The global model is the CNN model
+defined for the CIFAR-10 dataset in Section 3.2, which achieves an evaluation accuracy
+of approximately 70% and an evaluation loss of 0.92 upon completion of pre-training.
+This pre-training aims to establish a strong basis for performance and accelerate the
+process of model convergence during federal learning.
+Federated Learning: Finally, after pre-training, the global model is now ready to proceed to federated training with the important difference that it is no longer initialized
+with random weights. Instead, it loads weights from pre-training, providing a stable
+starting point based on previous training with the augmented dataset. This approach
+ensures that the model has already developed a strong understanding of the various
+features and patterns presented in the augmented images, increasing the chances
+of more efficient and faster convergence during federated learning. The federated
+training follows the steps of the FedAvg algorithm described in Section 4.1, while also
+incorporating the Cyclical Learning Rate (CLR) policy detailed in Section 4.2.
+Horizontal Flip
+
+Brightness & Contrast
+
+Rotation & Scaling
+
+Add Noise
+
+Figure 1. Example of application of the above augmentation techniques to a random CIFAR-10 image.
+
+In federated learning environments with non-IID data, each client may only have
+access to a limited and skewed subset of the overall data distribution. This can lead to
+models that overfit client-specific data and fail to generalize well across the global dataset.
+Pre-training on a balanced and augmented dataset provides the model with a strong
+foundation by exposing it to a more comprehensive set of data features. As a result, the
+global model can better capture the underlying data structure and is less affected by the
+variations in local client datasets. By starting with pre-trained weights, the model converges
+faster and with greater stability during the federated learning process, particularly in nonIID environments, where initial random weight initializations would otherwise lead to
+slower and less reliable training.
+Based on the need to improve federated learning in non-IID data scenarios, the proposed strategy combines pre-training on augmented data and sharing a balanced subset of
+data among all clients. Additionally, the integration of the Cyclical Learning Rate (CLR)
+
+Future Internet 2024, 16, 370
+
+16 of 31
+
+technique offers further optimization through cyclical adjustments of the learning rate,
+enhancing the model’s generalization and convergence speed. The flexibility in adjusting
+the size of the balanced subset and the sharing rate tailors the strategy to specific problem
+needs and applications. This strategy requires execution only once before federated learning begins, thus communication cost is not a barrier. Moreover, the shared data constitutes
+a separate set from each client’s private data, ensuring no privacy concerns. Overall, this
+strategy enhances the model’s ability to recognize patterns and features across a wide range
+of conditions, improving accuracy and generalization in non-IID data environments.
+The general framework of the proposed methodology, including the pre-training, data
+sharing, and CLR optimization strategies, is demonstrated in Figure 2.
+Legend
+Dataset
+(CSV Format)
+
+Clusters represent process groups
+
+Arrows represent data/process flow
+
+Data Preprocessing in PySpark
+Loading and Cleaning
+
+Feature Engineering
+
+Dense Vector Conversion
+Data Partitioning (IID and Non-IID)
+Partitioning into Clients
+
+Cyclical Learning Rate Strategy (CLR)
+Learning Rate Range Test (LRRT)
+
+Federated Learning (FedAvg with Optimization Strategies)
+Federated Learning Aggregation (FedAvg)
+Optimization for Communication Rounds
+
+Parquet Format
+Data Augmentation and Pre-Training
+Data Augmentation
+
+CLR Adjustment
+
+Cyclical Learning Rate during Global Training
+
+Reducing Communication Overhead
+
+Performance Evaluation and Convergence
+
+Local Model Training on Clients (TensorFlow Federated)
+Model Architecture
+
+Improvements Based on the Study
+Balanced Data Sharing
+
+Cyclical Learning Rate
+
+Data Augmentation and Pre-Training
+
+Pre-Training on Augmented Data
+
+Figure 2. Illustration of the proposed methodology architecture.
+
+5. Experimental Results
+5.1. Impact of Non-IID Data on FedAvg Performance
+In this section, we analyze the impact of non-IID data distribution on the performance
+of the FedAvg algorithm across three datasets: MNIST, Fashion MNIST, and CIFAR-10. For
+the experiments, we randomly selected 20 clients for each round of computation. Each
+client locally updates its model five times per round, with the overall training lasting for
+200 rounds. The batch size was set to 10 for the MNIST and Fashion MNIST datasets, and
+20 for the CIFAR-10 dataset.
+To evaluate federated optimization, it is crucial to determine how data are distributed
+among clients. We examine two data distribution methods: IID and non-IID, as described
+earlier. The results from these two distribution methods are compared, and we focus on the
+optimization of federated learning with non-IID data, which closely simulates real-world
+scenarios in federated learning systems. Given that users’ device usage varies, the samples
+on each device are not uniformly distributed, leading to a significant degradation in the
+performance of federated learning, particularly in terms of model accuracy and the number
+of communication rounds required for convergence.
+We begin by presenting the results of federated learning with a fixed learning rate for
+both IID and non-IID data distributions.
+5.1.1. Results on MNIST Dataset
+First, we compare the IID and non-IID distributions of the MNIST dataset using
+FedAvg with a fixed learning rate.
+Figure 3 above shows the evaluation accuracy over the training rounds for the MNIST
+dataset with IID and non-IID distributions. The federated training was performed with a
+fixed learning rate of 0.01 using SGD as the optimizer.
+
+Future Internet 2024, 16, 370
+
+17 of 31
+
+Figure 3. MNIST IID vs. MNIST non-IID with fixed learning rate.
+
+Table 1 displays the maximum accuracy achieved after 200 training rounds and the
+number of rounds needed to reach 94% evaluation accuracy. The results highlight the
+performance differences between IID and non-IID data distributions.
+Table 1. Maximum accuracy and rounds to 94%.
+Data Distribution
+
+Maximum Accuracy (%)
+
+Rounds to 94%
+
+MNIST IID
+
+96.83
+
+55
+
+MNIST Non-IID
+
+94.04
+
+195
+
+5.1.2. Results on Fashion MNIST Dataset
+Next, we compare the IID and non-IID distributions of the Fashion MNIST dataset
+using FedAvg with a fixed learning rate.
+As presented in Figure 4, the evaluation accuracy over the training rounds is compared
+for the Fashion MNIST dataset with IID and non-IID distributions, trained using the SGD
+optimizer with a fixed learning rate of 0.01.
+Table 2 summarizes the maximum accuracy achieved after 200 training rounds and the
+number of rounds required to reach 71% test accuracy. The table highlights the significant
+difference in performance between IID and non-IID distributions.
+Table 2. Maximum accuracy and rounds to 71%.
+Data Distribution
+
+Maximum Accuracy (%)
+
+Rounds to 71%
+
+FMNIST IID
+
+81.8
+
+15
+
+FMNIST Non-IID
+
+71.2
+
+160
+
+Future Internet 2024, 16, 370
+
+18 of 31
+
+Figure 4. Fashion MNIST IID vs. Fashion MNIST non-IID with fixed learning rate.
+
+5.1.3. Results on CIFAR-10 Dataset
+Finally, we evaluate the performance of the FedAvg algorithm on the CIFAR-10 dataset
+under IID and non-IID data distributions.
+Figure 5 shows the evaluation accuracy over the training rounds for the CIFAR-10
+dataset with IID and non-IID distributions, trained with a fixed learning rate of 0.02 using
+the SGD optimizer.
+
+Figure 5. CIFAR-10 IID vs. CIFAR-10 non-IID with fixed learning rate.
+
+Future Internet 2024, 16, 370
+
+19 of 31
+
+Table 3 summarizes the maximum accuracy achieved after 200 training rounds and
+the number of rounds needed to reach 37% evaluation accuracy. The data indicate that the
+CIFAR-10 dataset, trained with non-IID distribution, suffered from significant performance
+degradation compared to the IID distribution, both in terms of maximum accuracy and the
+number of communication rounds required to reach the target accuracy.
+Table 3. Maximum accuracy and rounds to 37%.
+Data Distribution
+
+Maximum Accuracy (%)
+
+Rounds to 37%
+
+CIFAR-10 IID
+
+52.2
+
+43
+
+CIFAR-10 Non-IID
+
+37.8
+
+176
+
+5.2. Results of Federated Learning with Cyclical Learning Rate
+5.2.1. CLR Results on MNIST
+Starting with the MNIST dataset, we observe the optimization of the federated training
+done by using a cyclical learning rate under non-IID conditions. First, we run the learning
+rate range test (LRRT) with SGD as the optimizer.
+The learning rate range test identified 0.007 as the minimum learning rate, where the
+loss began to decrease, and 0.1 as the maximum, where the loss started to slow down, as
+demonstrated in Figure 6. These learning rate values were used as bounds for the CLR
+strategy during federated training.
+
+Figure 6. Learning rate range test for MNIST.
+
+Next, we proceeded to the performance comparison between FedAvg with a fixed
+learning rate and FedAvg with CLR on the MNIST non-IID dataset.
+Figure 7 indicates the evaluation accuracy over the training rounds for the FedAvg
+with a fixed learning rate set at 0.01 and FedAvg with a cyclical learning rate policy, where
+the learning rate fluctuates between a minimum of 0.007 and a maximum of 0.1.
+Table 4 illustrates the differences in evaluation accuracy between these two strategies
+per 10 rounds of training.
+
+Future Internet 2024, 16, 370
+
+20 of 31
+
+Figure 7. MNIST non-IID with fixed learning rate vs. MNIST non-IID with cyclical learning rate.
+Table 4. Evaluation accuracy differences per 10 training rounds.
+Communication Rounds
+
+SGD with Fixed Lr
+
+SGD with Cyclical Lr
+
+1
+
+0.13520
+
+0.11860
+
+10
+
+0.30460
+
+0.48240
+
+20
+
+0.59600
+
+0.76400
+
+30
+
+0.75100
+
+0.87330
+
+40
+
+0.77560
+
+0.90590
+
+50
+
+0.78870
+
+0.91790
+
+60
+
+0.85590
+
+0.93350
+
+70
+
+0.86870
+
+0.93110
+
+80
+
+0.86620
+
+0.93290
+
+90
+
+0.89580
+
+0.94440
+
+100
+
+0.89050
+
+0.95460
+
+110
+
+0.89560
+
+0.95220
+
+120
+
+0.90540
+
+0.95310
+
+130
+
+0.91890
+
+0.95120
+
+140
+
+0.91720
+
+0.95670
+
+150
+
+0.92600
+
+0.96390
+
+160
+
+0.90330
+
+0.96340
+
+170
+
+0.91490
+
+0.94760
+
+180
+
+0.92680
+
+0.95770
+
+190
+
+0.93930
+
+0.96460
+
+200
+
+0.91890
+
+0.96820
+
+Future Internet 2024, 16, 370
+
+21 of 31
+
+The use of the cyclical learning rate strategy helped the model to achieve a higher
+accuracy of 97.01% in 200 rounds, compared to 94.04% with a fixed learning rate.
+Additionally, as shown in Table 5, CLR enabled the model to achieve the target test accuracy in significantly fewer rounds compared to using a fixed learning rate, demonstrating
+a notable speedup.
+Table 5. Maximum accuracy and rounds to 94%.
+Max Accuracy (%)
+
+Rounds to 94%
+
+Speedup (Rounds)
+
+mnist_sgd_fixed
+
+94.04
+
+195
+
+x1
+
+mnist_sgd_clr
+
+97.01
+
+64
+
+x3.04
+
+5.2.2. CLR Results on Fashion MNIST
+Moving on to the Fashion MNIST dataset, we observe the optimization of federated
+training achieved using a cyclic learning rate under non-IID conditions.
+First, we performed the learning rate range test (LRRT).
+The learning rate range test identified 0.01 as the minimum learning rate, where the
+loss began to decrease, and 0.07 as the maximum, where the loss started to slow down,
+as illustrated in Figure 8. These values were used as limits for the CLR strategy during
+federated training.
+
+Figure 8. Learning rate range test for fashion MNIST.
+
+Next, we compared the performance of FedAvg with a fixed learning rate and FedAvg
+with CLR on the Fashion MNIST non-IID dataset.
+Figure 9 illustrates the evaluation accuracy over the training rounds for FedAvg with
+a fixed learning rate set at 0.01 and FedAvg with a cyclical learning rate policy, where the
+learning rate oscillates between a minimum of 0.01 and a maximum of 0.07.
+Table 6 highlights the differences in evaluation accuracy between these two strategies
+per 10 rounds of training.
+Applying the cyclical learning rate strategy allowed the model to reach a higher
+accuracy of 78.3% in 200 rounds, compared to 71.2% with a fixed learning rate.
+Also, as shown in Table 7, CLR allowed the model to achieve the target test accuracy
+much faster than the fixed learning rate, showing a substantial improvement in training speed.
+
+Future Internet 2024, 16, 370
+
+22 of 31
+
+Figure 9. Fashion MNIST non-IID with fixed learning rate vs. Fashion MNIST non-IID with CLR.
+Table 6. Evaluation accuracy differences per 10 training rounds.
+Communication Rounds
+
+SGD with Fixed Lr
+
+SGD with Cyclical Lr
+
+1
+
+0.17280
+
+0.10160
+
+10
+
+0.45500
+
+0.50340
+
+20
+
+0.52260
+
+0.50360
+
+30
+
+0.48340
+
+0.42310
+
+40
+
+0.52060
+
+0.57900
+
+50
+
+0.41760
+
+0.60920
+
+60
+
+0.52520
+
+0.69540
+
+70
+
+0.57230
+
+0.68690
+
+80
+
+0.65590
+
+0.74240
+
+90
+
+0.62690
+
+0.72660
+
+100
+
+0.64120
+
+0.73820
+
+110
+
+0.56650
+
+0.74840
+
+120
+
+0.55690
+
+0.75260
+
+130
+
+0.59590
+
+0.69330
+
+140
+
+0.56990
+
+0.70070
+
+150
+
+0.62820
+
+0.73910
+
+160
+
+0.71200
+
+0.68270
+
+170
+
+0.70300
+
+0.76290
+
+180
+
+0.68950
+
+0.74180
+
+190
+
+0.70440
+
+0.73720
+
+200
+
+0.62200
+
+0.77640
+
+Future Internet 2024, 16, 370
+
+23 of 31
+
+Table 7. Maximum accuracy and rounds to 71%.
+Max Accuracy (%)
+
+Rounds to 71%
+
+Speedup (Rounds)
+
+fmnist_sgd_fixed
+
+71.2
+
+160
+
+x1
+
+fmnist_sgd_clr
+
+78.3
+
+69
+
+x2.3
+
+5.2.3. CLR Results on CIFAR-10
+Finally, we turn to the CIFAR-10 dataset to further examine the benefits of employing
+a cyclical learning rate in the context of non-IID conditions throughout the federated
+learning process.
+As with the other datasets, we started by conducting the Learning Rate Range Test
+(LRRT) with SGD as the optimizer:
+As depicted in Figure 10, the learning rate range test identified 0.02 as the minimum
+learning rate, where the loss began to decrease, and 0.2 as the maximum, where the loss
+started to become ragged and increase, indicating potential instability. These bounds were
+then used for the CLR strategy during the federated training process.
+
+Figure 10. Learning rate range test for CIFAR-10.
+
+We then compared the performance of FedAvg with a fixed learning rate and FedAvg
+with CLR on the CIFAR-10 non-IID dataset.
+Figure 11 displays the evaluation accuracy over the training rounds for FedAvg using
+a fixed learning rate of 0.02 and FedAvg using a cyclical learning rate policy, with the
+learning rate varying between a minimum of 0.02 and a maximum of 0.2.
+Table 8 illustrates the differences in evaluation accuracy between these two strategies
+per 10 rounds of training.
+Applying the cyclic learning rate strategy helped the model achieve a higher accuracy
+of 48.8% in 200 rounds, compared to 37.8% with a constant learning rate.
+As presented in Table 9, CLR enabled the model to attain the target accuracy in considerably fewer rounds than with the fixed learning rate, highlighting a notable improvement
+in training efficiency.
+
+Future Internet 2024, 16, 370
+
+24 of 31
+
+Table 8. Evaluation accuracy differences per 10 training rounds.
+Communication Rounds
+
+SGD with Fixed Lr
+
+SGD with Cyclical Lr
+
+1
+
+0.09980
+
+0.09620
+
+10
+
+0.14370
+
+0.15940
+
+20
+
+0.14920
+
+0.10310
+
+30
+
+0.20900
+
+0.20790
+
+40
+
+0.24100
+
+0.23200
+
+50
+
+0.17450
+
+0.30710
+
+60
+
+0.24200
+
+0.31320
+
+70
+
+0.22480
+
+0.26330
+
+80
+
+0.17260
+
+0.27600
+
+90
+
+0.17400
+
+0.37130
+
+100
+
+0.21020
+
+0.42310
+
+110
+
+0.22460
+
+0.33850
+
+120
+
+0.27970
+
+0.40440
+
+130
+
+0.26620
+
+0.42730
+
+140
+
+0.30510
+
+0.43270
+
+150
+
+0.31660
+
+0.37720
+
+160
+
+0.20150
+
+0.42310
+
+170
+
+0.36300
+
+0.46350
+
+180
+
+0.28750
+
+0.40060
+
+190
+
+0.30010
+
+0.41100
+
+200
+
+0.32790
+
+0.47660
+
+Figure 11. CIFAR-10 non-IID with fixed learning rate vs. CIFAR-10 non-IID with CLR.
+
+Future Internet 2024, 16, 370
+
+25 of 31
+
+Table 9. Maximum accuracy and rounds to 37%.
+Max Accuracy (%)
+
+Rounds to 37%
+
+Speedup (Rounds)
+
+cifar_sgd_fixed
+
+37.8
+
+176
+
+x1
+
+cifar_sgd_clr
+
+48.8
+
+90
+
+x1.95
+
+5.3. Results of Federated Learning with Data Sharing and Pre-Training on Augmented Data
+This section presents the performance improvements achieved through the implementation of the strategy combining data sharing and pre-training on augmented data,
+compared to the baseline federated learning model. This strategy was applied to the CIFAR10 dataset, which was partitioned in a non-IID manner among 500 clients, as described in
+Section 3.4.
+We compare the performance of three different strategies: the baseline federated
+learning model with a fixed learning rate, the model using the Cyclical Learning Rate (CLR)
+strategy, and the model that combines the data sharing and pre-training on augmented
+data strategy with the CLR strategy.
+The graph in Figure 12 displays the evaluation accuracy across 200 communication
+rounds for the three different federated learning strategies applied to the CIFAR-10 dataset
+with non-IID data distribution. The blue line represents the performance of the FedAvg
+algorithm with a fixed learning rate of 0.02. The orange line illustrates the performance
+of FedAvg with a cyclical learning rate, where the learning rate ranges between 0.02 and
+0.2. Finally, the green line depicts the performance of the FedAvg algorithm using the data
+sharing and pre-training on the augmented data strategy, in which the cyclical learning
+rate policy (min_lr = 0.02 and max_lr = 0.2) has also been applied.
+
+Figure 12. CIFAR-10 Fixed LR vs. CIFAR-10 CLR vs. CIFAR-10 CLR + PreTrained.
+
+Table 10 highlights the differences in evaluation accuracy between these three strategies per 10 rounds of training.
+
+Future Internet 2024, 16, 370
+
+26 of 31
+
+Table 10. Evaluation accuracy differences per 10 training rounds.
+Training Rounds
+
+SGD Fixed Lr
+
+SGD Cyclical LR (CLR)
+
+SGD CLR + PreTrain
+
+1
+
+0.09980
+
+0.09620
+
+0.10580
+
+10
+
+0.14370
+
+0.15940
+
+0.11180
+
+20
+
+0.14920
+
+0.10310
+
+0.24180
+
+30
+
+0.20900
+
+0.20790
+
+0.33730
+
+40
+
+0.24100
+
+0.23200
+
+0.40870
+
+50
+
+0.17450
+
+0.30710
+
+0.43760
+
+60
+
+0.24200
+
+0.31320
+
+0.42070
+
+70
+
+0.22480
+
+0.26330
+
+0.41440
+
+80
+
+0.17260
+
+0.27600
+
+0.41900
+
+90
+
+0.17400
+
+0.37130
+
+0.45390
+
+100
+
+0.21020
+
+0.42310
+
+0.47330
+
+110
+
+0.22460
+
+0.33850
+
+0.46050
+
+120
+
+0.27970
+
+0.40440
+
+0.46350
+
+130
+
+0.26620
+
+0.42730
+
+0.46390
+
+140
+
+0.30510
+
+0.43270
+
+0.44680
+
+150
+
+0.31660
+
+0.37720
+
+0.49480
+
+160
+
+0.20150
+
+0.42310
+
+0.49830
+
+170
+
+0.36300
+
+0.46350
+
+0.48170
+
+180
+
+0.28750
+
+0.40060
+
+0.47940
+
+190
+
+0.30010
+
+0.41100
+
+0.50470
+
+200
+
+0.32790
+
+0.47660
+
+0.51490
+
+As shown in Table 11, the model trained with the data sharing and pre-training strategy
+on augmented data outperformed both the CLR model and the model with a fixed learning
+rate, achieving higher accuracy and faster convergence. This strategy significantly reduced
+the number of rounds required to achieve the target accuracy compared with the other
+approaches, demonstrating a significant improvement in training speed and efficiency.
+Table 11. Comparative performance and percentage improvements.
+
+Metric
+
+Fixed
+LR
+
+CLR
+
+CLR +
+PreTrain
+
+% Improv.
+(CLR over
+Fixed)
+
+% Improv.
+(CLR+PreTrain
+over Fixed)
+
+% Improv.
+(CLR+PreTrain
+over CLR)
+
+Max
+Accuracy (%)
+
+37.8
+
+48.8
+
+51.4
+
+29.1%
+
+36%
+
+5.3%
+
+Rounds
+to 37%
+
+176
+
+90
+
+33
+
+1.95x
+
+5.33x
+
+2.72x
+
+Speedup
+(rounds)
+
+x1
+
+x1.95
+
+x5.33
+
+95%
+
+433%
+
+173%
+
+6. Conclusions and Future Work
+This study focuses on analyzing and improving the performance of federated learning
+in environments characterized by highly non-IID data. Our experimental results led to several conclusions about the impact of non-IID data on FL performance and the improvements
+achieved through the strategies we implemented.
+
+Future Internet 2024, 16, 370
+
+27 of 31
+
+Training models on three distinct datasets—MNIST, Fashion MNIST, and CIFAR10—demonstrated that the effectiveness of federated learning significantly decreases when
+applied to non-IID data compared with IID data. For instance, in the case of the MNIST
+dataset, training on non-IID data led to a 3.09% decrease in accuracy and a 3.54-fold increase
+in the number of communication rounds required to achieve the target accuracy of 94%,
+compared with training on IID data. The impact was more pronounced for the Fashion
+MNIST dataset, with a 13.41% accuracy reduction and a 10.67-fold delay in reaching the
+target accuracy of 71%. Finally, for the CIFAR-10 dataset, the effect of non-IID data was
+even more drastic, with a 28.85% decrease in accuracy leading to a 4.09-fold increase in the
+number of communication rounds required to achieve the target accuracy of 37%.
+These results confirm the significant challenge posed by non-IID data in federated
+learning. The primary goal of our efforts was to address these challenges by implementing the Cyclical Learning Rate (CLR) strategy and the data sharing and pre-training on
+augmented data strategy.
+The application of the CLR strategy significantly improved the performance of the
+FedAvg algorithm on non-IID data compared with the conventional use of a fixed learning
+rate, as demonstrated by the experimental results across the three datasets: MNIST, Fashion
+MNIST, and CIFAR-10. Specifically, for the MNIST dataset, the use of CLR resulted in a
+3.2% increase in evaluation accuracy and a 3% reduction in the required communication
+rounds to achieve the target evaluation accuracy of 94%, compared with using a fixed
+learning rate. In the case of the Fashion MNIST dataset, progress was even more evident,
+showing an increase in accuracy of 10%, while the communication rounds required to
+achieve the desired 71% accuracy were reduced by a factor of 2.32. For CIFAR-10, the
+CLR strategy provided the most significant improvement, increasing accuracy by 29%,
+from 37% to 48%, and reducing the communication rounds needed to achieve the target
+evaluation accuracy of 37% by 1.96 times.
+Recognizing the need for further improvement in federated learning in non-IID scenarios, particularly for more complex datasets like CIFAR-10, we developed the data sharing
+and pre-training on augmented data strategy. Applying this strategy to the CIFAR-10
+dataset yielded remarkable results, with the final model’s accuracy increasing by 36%
+compared to the FedAvg approach with a fixed learning rate. Moreover, the time required
+to achieve the target evaluation accuracy of 37% was reduced by 5.33 times, decreasing the
+number of communication rounds from 176 to just 33. Compared to the CLR approach, the
+data sharing and pre-training on augmented data strategy allowed the model to achieve an
+evaluation accuracy of 51.4% in 200 training rounds, reflecting an increase in accuracy of
+5.3%. Additionally, this strategy allows reaching the desired evaluation accuracy 2.72 times
+faster than the CLR approach, thus reducing the required communication rounds from 90
+to 33.
+Based on our experimental results, we conclude that the implementation of the data
+sharing and pre-training strategy on augmented data combined with the cyclic learning
+rate policy is an effective solution to the important problem presented by non-IID data in
+federated training. This approach not only enhances the generalization capability of the
+model but also accelerates the speed of model convergence, facilitating the application of
+federated learning to real-world applications and reducing the time and resources required
+to train an efficient model.
+While this study focuses on improving federated learning performance across different datasets, there are further areas within federated learning that offer opportunities for
+research and development, such as reducing communication costs and enhancing protocol
+security. Communication between clients and the central server is one of the most costly
+processes in FL, leading to the development of data compression methods and improved
+communication protocols. For example, the study [63] presents FedZip, a compression
+strategy for federated learning that reduces communication costs by applying Top-z sparsification, quantization, and compression techniques, achieving high compression rates in
+model weight updates transmitted between clients and servers. Regarding security and
+
+Future Internet 2024, 16, 370
+
+28 of 31
+
+privacy, ref. [64] proposes a method for implementing differential privacy in federated
+learning from the client side, aiming to protect client contributions while maintaining
+model performance. Furthermore, ref. [65] presents a secure aggregation protocol that
+ensures privacy in computing the sum of data vectors held by users without revealing
+individual contributions, addressing potential attacks, and improving communication
+efficiency even for large datasets.
+Future investigations will include implementing DeepSMOTE [66] into our federated
+learning framework because of its demonstrated success in managing class imbalances
+in centralized machine-learning scenarios. The research we are currently conducting
+emphasizes data augmentation methods outlined for federated learning, while further
+examination of DeepSMOTE as a potential solution for balancing classes in non-IID data
+could provide greater enhancements to model accuracy and convergence [66]. The approach taken during this exploration will enhance the privacy-preserving principles of
+federated learning.
+While our study demonstrates the effectiveness of Cyclical Learning Rate (CLR) and
+pre-training techniques on augmented data within a federated setup involving up to 1000
+and 500 clients, further exploration is needed to investigate the scalability of these methods
+in environments with significantly larger client populations. Scaling to a larger number
+of clients is a critical area of exploration, as it reflects real-world applications where largescale deployments are common. However, the current study was conducted within the
+limitations of datasets that were suitable for a smaller client pool. As a result, it may
+not fully capture the complexities encountered in larger-scale federated learning systems,
+where challenges such as increased communication overhead and data diversity play a
+more pronounced role. These limitations highlight the need for further investigations that
+utilize larger datasets and more extensive client populations to gain deeper insights into
+the scalability and generalizability of the proposed optimization techniques.
+Furthermore, for the purpose of our research, we decided to focus on an exaggerated
+case of strongly non-IID settings where each client had data from only two classes. This very
+disparate partitioning strategy is intended to severely stress our proposed optimization
+schemes so as to assess how well they will work under extreme conditions. However, such
+an aggressive non-IID distribution does not seem to simulate typical real settings well
+since clients’ data are often less skewed than what the above sketched IID assumption
+suggests. Even though this rather extreme scenario enabled us to compare the performance
+of the proposed strategies under a very controlled non-IID regime, it would be valuable in
+future works to address a wider range of non-IID settings that are more characteristic of
+real-world data distribution. Future work can include examining more general cases of
+non-IID conditions in order to have a better picture of how these techniques generalize in
+realistic federated environments for FL.
+Author Contributions: Methodology, F.E. and A.K.; Software, F.E. and A.K.; Validation, F.E. and
+C.K.; Formal analysis, F.E.; Investigation, A.K.; Resources, C.K.; Data curation, F.E. and C.K.;
+Writing—original draft, C.K.; Writing—review & editing, A.K.; Supervision, A.K. and S.S.; Project
+administration, S.S. All authors have read and agreed to the published version of the manuscript.
+Funding: This research received no external funding.
+Data Availability Statement: The original contributions presented in the study are included in the
+article, further inquiries can be directed to the corresponding authors.
+Conflicts of Interest: The authors declare no conflicts of interest.
+
+Future Internet 2024, 16, 370
+
+29 of 31
+
+Abbreviations
+The following abbreviations are used in this manuscript:
+CNNs
+CLR
+Decaying LR
+FedAvg
+FC
+FedSGD
+Fixed LR
+FL
+LRRT
+MNIST
+RDD
+SGD
+SVMs
+TFF
+
+Convolutional Neural Networks
+Cyclical Learning Rate
+Decaying Learning Rate
+Federated Averaging
+Federated Core
+Federated Stochastic Gradient Descent
+Fixed Learning Rate
+Federated Learning
+Learning Rate Range Test
+Modified National Institute of Standards and Technology
+Resilient Distributed Dataset
+Stochastic Gradient Descent
+Support Vector Machines
+TensorFlow Federated
+
+References
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+
+9.
+10.
+11.
+12.
+13.
+14.
+15.
+
+16.
+
+17.
+18.
+19.
+
+Rydning, D.R.J.; Reinsel, J.; Gantz, J. The digitization of the world from edge to core. Fram. Int. Data Corp. 2018, 16, 1–28.
+McMahan, H.B.; Moore, E.; Ramage, D.; Hampson, S.; Arcas, B.A.y. Communication-Efficient Learning of Deep Networks from
+Decentralized Data. arXiv 2023, arXiv:1602.05629.
+Li, T.; Sahu, A.K.; Talwalkar, A.; Smith, V. Federated learning: Challenges, methods, and future directions. IEEE Signal Process.
+Mag. 2020, 37, 50–60. [CrossRef]
+Smith, L.N. Cyclical Learning Rates for Training Neural Networks. In Proceedings of the 2017 IEEE Winter Conference on
+Applications of Computer Vision (WACV), Santa Rosa, CA, USA, 24–31 March 2017; pp. 464–472. [CrossRef]
+Chen, H.Y.; Tu, C.H.; Li, Z.; Shen, H.W.; Chao, W.L. On the Importance and Applicability of Pre-Training for Federated Learning.
+arXiv 2023, arXiv:2206.11488.
+Zhao, Y.; Li, M.; Lai, L.; Suda, N.; Civin, D.; Chandra, V. Federated Learning with Non-IID Data. arXiv 2018, arXiv:1806.00582.
+[CrossRef]
+Asad, M.; Moustafa, A.; Ito, T. Federated Learning Versus Classical Machine Learning: A Convergence Comparison. arXiv 2021,
+arXiv:2107.10976.
+Giannaros, A.; Karras, A.; Theodorakopoulos, L.; Karras, C.; Kranias, P.; Schizas, N.; Kalogeratos, G.; Tsolis, D. Autonomous
+vehicles: Sophisticated attacks, safety issues, challenges, open topics, blockchain, and future directions. J. Cybersecur. Priv. 2023,
+3, 493–543. [CrossRef]
+Kaur, G.; Grewal, S.K.; Jain, A. Federated Learning based Spatio-Temporal framework for real-time traffic prediction. Wirel. Pers.
+Commun. 2024, 136, 849–865. [CrossRef]
+Raghunath, K.K.; Bhat, C.R.; Kumar, V.V.; Velmurugan, A.; Mahesh, T.; Manikandan, K.; Krishnamoorthy, N. Redefining Urban
+Traffic Dynamics with TCN-FL Driven Traffic Prediction and Control Strategies. IEEE Access 2024, 12, 115386–115399. [CrossRef]
+Xu, J.; Glicksberg, B.S.; Su, C.; Walker, P.; Bian, J.; Wang, F. Federated learning for healthcare informatics. J. Healthc. Inform. Res.
+2021, 5, 1–19. [CrossRef]
+Lakhan, A.; Hamouda, H.; Abdulkareem, K.H.; Alyahya, S.; Mohammed, M.A. Digital healthcare framework for patients with
+disabilities based on deep federated learning schemes. Comput. Biol. Med. 2024, 169, 107845. [CrossRef] [PubMed]
+Sachin, D.; Annappa, B.; Hegde, S.; Abhijit, C.S.; Ambesange, S. Fedcure: A heterogeneity-aware personalized federated learning
+framework for intelligent healthcare applications in iomt environments. IEEE Access 2024, 12, 15867–15883.
+Lee, J.; Solat, F.; Kim, T.Y.; Poor, H.V. Federated learning-empowered mobile network management for 5G and beyond networks:
+From access to core. IEEE Commun. Surv. Tutor. 2024, 26, 2176–2212. [CrossRef]
+Hasan, M.K.; Habib, A.A.; Islam, S.; Safie, N.; Ghazal, T.M.; Khan, M.A.; Alzahrani, A.I.; Alalwan, N.; Kadry, S.; Masood,
+A. Federated learning enables 6 G communication technology: Requirements, applications, and integrated with intelligence
+framework. Alex. Eng. J. 2024, 91, 658–668. [CrossRef]
+Li, Z.; Hou, Z.; Liu, H.; Li, T.; Yang, C.; Wang, Y.; Shi, C.; Xie, L.; Zhang, W.; Xu, L.; et al. Federated Learning in Large Model Era:
+Vision-Language Model for Smart City Safety Operation Management. In Proceedings of the Companion Proceedings of the
+ACM on Web Conference, Singapore, 13–17 May 2024; pp. 1578–1585.
+Xu, H.; Seng, K.P.; Smith, J.; Ang, L.M. Multi-Level Split Federated Learning for Large-Scale AIoT System Based on Smart Cities.
+Future Internet 2024, 16, 82. [CrossRef]
+Munawar, A.; Piantanakulchai, M. A collaborative privacy-preserving approach for passenger demand forecasting of autonomous
+taxis empowered by federated learning in smart cities. Sci. Rep. 2024, 14, 2046. [CrossRef]
+Friha, O.; Ferrag, M.A.; Benbouzid, M.; Berghout, T.; Kantarci, B.; Choo, K.K.R. 2DF-IDS: Decentralized and differentially private
+federated learning-based intrusion detection system for industrial IoT. Comput. Secur. 2023, 127, 103097. [CrossRef]
+
+Future Internet 2024, 16, 370
+
+20.
+21.
+22.
+23.
+24.
+25.
+26.
+
+27.
+28.
+
+29.
+30.
+31.
+32.
+33.
+34.
+35.
+36.
+37.
+
+38.
+39.
+
+40.
+41.
+42.
+43.
+44.
+45.
+46.
+
+30 of 31
+
+Farahani, B.; Monsefi, A.K. Smart and collaborative industrial IoT: A federated learning and data space approach. Digit. Commun.
+Netw. 2023, 9, 436–447. [CrossRef]
+Rashid, M.M.; Khan, S.U.; Eusufzai, F.; Redwan, M.A.; Sabuj, S.R.; Elsharief, M. A federated learning-based approach for
+improving intrusion detection in industrial internet of things networks. Network 2023, 3, 158–179. [CrossRef]
+Qin, Z.; Yan, X.; Zhou, M.; Deng, S. BlockDFL: A Blockchain-based Fully Decentralized Peer-to-Peer Federated Learning
+Framework. In Proceedings of the ACM on Web Conference 2024, Singapore, 13–17 May 2024; pp. 2914–2925.
+Wu, X.; Liu, Y.; Tian, J.; Li, Y. Privacy-preserving trust management method based on blockchain for cross-domain industrial IoT.
+Knowl.-Based Syst. 2024, 283, 111166. [CrossRef]
+Chen, J.; Wang, Z.; Srivastava, G.; Alghamdi, T.A.; Khan, F.; Kumari, S.; Xiong, H. Industrial blockchain threshold signatures in
+federated learning for unified space-air-ground-sea model training. J. Ind. Inf. Integr. 2024, 39, 100593. [CrossRef]
+Shaheen, M.; Farooq, M.S.; Umer, T.; Kim, B.S. Applications of federated learning; Taxonomy, challenges, and research trends.
+Electronics 2022, 11, 670. [CrossRef]
+Karras, A.; Karras, C.; Giotopoulos, K.C.; Tsolis, D.; Oikonomou, K.; Sioutas, S. Peer to Peer Federated Learning: Towards Decentralized Machine Learning on Edge Devices. In Proceedings of the 2022 7th South-East Europe Design Automation, Computer
+Engineering, Computer Networks and Social Media Conference (SEEDA-CECNSM), Ioannina, Greece, 23–25 September 2022;
+pp. 1–9. [CrossRef]
+Liu, R.; Cao, Y.; Yoshikawa, M.; Chen, H. FedSel: Federated SGD under Local Differential Privacy with Top-k Dimension Selection.
+arXiv 2020, arXiv:2003.10637. [CrossRef]
+Nilsson, A.; Smith, S.; Ulm, G.; Gustavsson, E.; Jirstrand, M. A Performance Evaluation of Federated Learning Algorithms.
+In Proceedings of the Second Workshop on Distributed Infrastructures for Deep Learning, Rennes, France, 10 December 2018;
+pp. 1–8. [CrossRef]
+Fallah, A.; Mokhtari, A.; Ozdaglar, A. Personalized Federated Learning: A Meta-Learning Approach. arXiv 2020, arXiv:2002.07948.
+[CrossRef]
+Li, T.; Sahu, A.K.; Zaheer, M.; Sanjabi, M.; Talwalkar, A.; Smith, V. Federated optimization in heterogeneous networks. Proc.
+Mach. Learn. Syst. 2020, 2, 429–450.
+Wu, Y.; Liu, L. Selecting and Composing Learning Rate Policies for Deep Neural Networks. ACM Trans. Intell. Syst. Technol.
+(TIST) 2023, 14, 1–25. [CrossRef]
+Yang, S.; Xiao, W.; Zhang, M.; Guo, S.; Zhao, J.; Shen, F. Image Data Augmentation for Deep Learning: A Survey. arXiv 2023,
+arXiv:2204.08610.
+Jeong, E.; Oh, S.; Kim, H.; Park, J.; Bennis, M.; Kim, S.L. Communication-efficient on-device machine learning: Federated
+distillation and augmentation under non-iid private data. arXiv 2018, arXiv:1811.11479.
+Rasouli, M.; Sun, T.; Rajagopal, R. Fedgan: Federated generative adversarial networks for distributed data. arXiv 2020,
+arXiv:2006.07228.
+Yoon, T.; Shin, S.; Hwang, S.J.; Yang, E. Fedmix: Approximation of mixup under mean augmented federated learning. arXiv 2021,
+arXiv:2107.00233.
+Lin, T.; Kong, L.; Stich, S.U.; Jaggi, M. Ensemble distillation for robust model fusion in federated learning. Adv. Neural Inf. Process.
+Syst. 2020, 33, 2351–2363.
+Zhang, L.; Shen, L.; Ding, L.; Tao, D.; Duan, L.Y. Fine-tuning global model via data-free knowledge distillation for non-iid
+federated learning. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, New Orleans, LA,
+USA, 18–24 June 2022; pp. 10174–10183.
+Shen, X.; Liu, Y.; Zhang, Z. Performance-enhanced federated learning with differential privacy for internet of things. IEEE
+Internet Things J. 2022, 9, 24079–24094. [CrossRef]
+Erhan, D.; Courville, A.; Bengio, Y.; Vincent, P. Why does unsupervised pre-training help deep learning? In Proceedings of
+the Thirteenth International Conference on Artificial Intelligence and Statistics, JMLR Workshop and Conference Proceedings,
+Sardinia, Italy, 13–15 May 2010; pp. 201–208.
+Hendrycks, D.; Lee, K.; Mazeika, M. Using pre-training can improve model robustness and uncertainty. In Proceedings of the
+International Conference on Machine Learning, PMLR, Long Beach, CA, USA, 9–15 June 2019; pp. 2712–2721.
+Duchi, J.; Hazan, E.; Singer, Y. Adaptive subgradient methods for online learning and stochastic optimization. J. Mach. Learn. Res.
+2011, 12, 2121–2159.
+Kingma, D.P.; Ba, J. Adam: A method for stochastic optimization. arXiv 2014, arXiv:1412.6980.
+Sutskever, I.; Martens, J.; Dahl, G.; Hinton, G. On the importance of initialization and momentum in deep learning. In Proceedings
+of the International Conference on Machine Learning, PMLR, Atlanta, GA, USA, 17–19 June 2013; pp. 1139–1147.
+Ju, L.; Zhang, T.; Toor, S.; Hellander, A. Accelerating fair federated learning: Adaptive federated adam. IEEE Trans. Mach. Learn.
+Commun. Netw. 2024, 2, 1017–1032. [CrossRef]
+Sharma, A. A Comprehensive Guide to Google Colab: Features, Usage, and Best Practices. Available online: https://www.
+analyticsvidhya.com/blog/2020/03/google-colab-machine-learning-deep-learning/ (accessed on 10 October 2024).
+TensorFlow. Federated Core|TensorFlow. Available online: https://www.tensorflow.org/federated/federated_core (accessed on
+10 October 2024).
+
+Future Internet 2024, 16, 370
+
+47.
+48.
+49.
+50.
+51.
+52.
+53.
+54.
+55.
+56.
+
+57.
+58.
+
+59.
+
+60.
+61.
+62.
+63.
+64.
+65.
+
+66.
+
+31 of 31
+
+TensorFlow. Federated Learning|TensorFlow. Available online: https://www.tensorflow.org/federated/federated_learning
+(accessed on 10 October 2024).
+Zaharia, M.; Xin, R.S.; Wendell, P.; Das, T.; Armbrust, M.; Dave, A.; Meng, X.; Rosen, J.; Venkataraman, S.; Franklin, M.J.; et al.
+Apache Spark: A unified engine for big data processing. Commun. ACM 2016, 59, 56–65. [CrossRef]
+Chen, F.; Chen, N.; Mao, H.; Hu, H. Assessing four Neural Networks on Handwritten Digit Recognition Dataset (MNIST). arXiv
+2019, arXiv:1811.08278. [CrossRef]
+Xiao, H.; Rasul, K.; Vollgraf, R. Fashion-MNIST: A Novel Image Dataset for Benchmarking Machine Learning Algorithms. arXiv
+2017, arXiv:1708.07747. [CrossRef]
+Krizhevsky, A.; Hinton, G. Learning Multiple Layers of Features from Tiny Images; University of Toronto: Toronto, ON, USA, 2009.
+Zhang, X.; Sun, W.; Chen, Y. Tackling the non-iid issue in heterogeneous federated learning by gradient harmonization. IEEE
+Signal Process. Lett. 2024, 31, 2595–2599. [CrossRef]
+Tenison, I.; Sreeramadas, S.A.; Mugunthan, V.; Oyallon, E.; Rish, I.; Belilovsky, E. Gradient masked averaging for federated
+learning. arXiv 2022, arXiv:2201.11986.
+Lu, Z.; Pan, H.; Dai, Y.; Si, X.; Zhang, Y. Federated learning with non-iid data: A survey. IEEE Internet Things J. 2024, 11,
+19188–19209. [CrossRef]
+You, X.; Liu, X.; Jiang, N.; Cai, J.; Ying, Z. Reschedule Gradients: Temporal Non-IID Resilient Federated Learning. IEEE Internet
+Things J. 2023, 10, 747–762. [CrossRef]
+Chen, S.; Li, B. Towards Optimal Multi-Modal Federated Learning on Non-IID Data with Hierarchical Gradient Blending.
+In Proceedings of the IEEE INFOCOM 2022—IEEE Conference on Computer Communications, London, UK, 2–5 May 2022;
+pp. 1469–1478. [CrossRef]
+Arisdakessian, S.; Wahab, O.A.; Mourad, A.; Otrok, H. Coalitional Federated Learning: Improving Communication and Training
+on Non-IID Data With Selfish Clients. IEEE Trans. Serv. Comput. 2023, 16, 2462–2476. [CrossRef]
+Bansal, S.; Bansal, M.; Verma, R.; Shorey, R.; Saran, H. FedNSE: Optimal node selection for federated learning with non-IID data.
+In Proceedings of the 2023 15th International Conference on COMmunication Systems & NETworkS (COMSNETS), Bangalore,
+India, 3–8 January 2023; IEEE: Piscataway, NJ, USA, 2023; pp. 713–721.
+Karras, A.; Giannaros, A.; Theodorakopoulos, L.; Krimpas, G.A.; Kalogeratos, G.; Karras, C.; Sioutas, S. FLIBD: A federated
+learning-based IoT big data management approach for privacy-preserving over Apache Spark with FATE. Electronics 2023,
+12, 4633. [CrossRef]
+Karras, A.; Giannaros, A.; Karras, C.; Theodorakopoulos, L.; Mammassis, C.S.; Krimpas, G.A.; Sioutas, S. TinyML algorithms for
+Big Data Management in large-scale IoT systems. Future Internet 2024, 16, 42. [CrossRef]
+Vlachou, E.; Karras, A.; Karras, C.; Theodorakopoulos, L.; Halkiopoulos, C.; Sioutas, S. Distributed Bayesian Inference for
+Large-Scale IoT Systems. Big Data Cogn. Comput. 2023, 8, 1. [CrossRef]
+Karras, A.; Karras, C.; Giotopoulos, K.C.; Tsolis, D.; Oikonomou, K.; Sioutas, S. Federated edge intelligence and edge caching
+mechanisms. Information 2023, 14, 414. [CrossRef]
+Malekijoo, A.; Fadaeieslam, M.J.; Malekijou, H.; Homayounfar, M.; Alizadeh-Shabdiz, F.; Rawassizadeh, R. FEDZIP: A
+Compression Framework for Communication-Efficient Federated Learning. arXiv 2021, arXiv:2102.01593. [CrossRef]
+Geyer, R.C.; Klein, T.; Nabi, M. Differentially Private Federated Learning: A Client Level Perspective. arXiv 2018, arXiv:1712.07557.
+[CrossRef]
+Bonawitz, K.; Ivanov, V.; Kreuter, B.; Marcedone, A.; McMahan, H.B.; Patel, S.; Ramage, D.; Segal, A.; Seth, K. Practical Secure
+Aggregation for Privacy-Preserving Machine Learning. In Proceedings of the 2017 ACM SIGSAC Conference on Computer and
+Communications Security, Dallas, TX, USA, 30 October–3 November 2017; pp. 1175–1191. [CrossRef]
+Dablain, D.; Krawczyk, B.; Chawla, N.V. DeepSMOTE: Fusing deep learning and SMOTE for imbalanced data. IEEE Trans. Neural
+Netw. Learn. Syst. 2022, 34, 6390–6404. [CrossRef]
+
+Disclaimer/Publisher’s Note: The statements, opinions and data contained in all publications are solely those of the individual
+author(s) and contributor(s) and not of MDPI and/or the editor(s). MDPI and/or the editor(s) disclaim responsibility for any injury to
+people or property resulting from any ideas, methods, instructions or products referred to in the content.
+
+

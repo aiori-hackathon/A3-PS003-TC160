@@ -1,0 +1,32 @@
+Category: Smart cities 
+PS-003: Federated Traffic-Flow Prediction with 
+Communication-Cost Evaluation 
+Description: 
+Centralized traffic forecasting requires edge cameras and roadside sensors to continuously stream raw data to a central cloud, consuming high cellular bandwidth and concentrating private travel logs. Federated Learning addresses this by training local models on edge devices and sharing only mathematical weight updates with a central server. In this project, you will build a federated simulator using a public traffic dataset partitioned across virtual intersections. You will evaluate how well a compact forecasting model using Federated Averaging (FedAvg) handles non-identically distributed (non-IID) traffic patterns, reporting prediction accuracy (MAE and RMSE) against network byte transmission costs per training round. 
+Challenge: 
+Compare federated and centralised traffic-flow prediction using a public traffic dataset distributed across simulated intersections. Study how non-IID data and communication overhead affect prediction performance and federated learning convergence. 
+Key Requirements 
+Use one public traffic dataset split across 3–5 simulated clients. 
+Implement FedAvg with one compact forecasting model. 
+Use chronological train/test splits to avoid data leakage. 
+Compare IID and non-IID client distributions. 
+Measure MAE/RMSE, communication bytes per round and convergence. 
+Run experiments using 3 random seeds. 
+No live cameras, city-wide deployment or formal privacy guarantees. 
+Expected Outcome 
+Federated learning simulator 
+Centralised and federated baselines 
+Traffic-flow forecasting model 
+Evaluation of IID vs non-IID performance 
+Communication-cost and convergence analysis 
+Final evaluation report with results across 3 seeds 
+Deliverables* 
+1. GitHub Collaboration: (This step is crucial for allowing mentors to provide real-time oversight.) Each team must set up a private repository on GitHub. 
+Add our GitHub account (https://github.com/aiori-hackathon) as a collaborator. 
+Once the collaboration request has been accepted all the concerned users (all the teammates as well as aiori-hackathon account) transfer the ownership of the repository to our GitHub account. (https://github.com/aiori-hackathon) 
+Ensure that your repository is named according to your team’s name. 
+*All deliverables need to be completed for getting particiaption certificate.
+2. Each team is required to upload a PDF to their GitHub repository 
+Please follow the specified structure: Proposed-structure-hackathon.pdf 3. Prototype Demonstration with a Pseudocode Snippet to the mentor References 
+https://proceedings.mlr.press/v54/mcmahan17a.html 
+*All deliverables need to be completed for getting particiaption certificate.

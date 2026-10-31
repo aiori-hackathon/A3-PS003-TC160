@@ -1,0 +1,12 @@
+{
+  "name": "AIOROI: Federated Traffic-Flow Predictor & Comm-Cost Evaluator",
+  "description": "Federated Learning (FedAvg) traffic forecasting simulation platform evaluating communication costs, non-IID client drift, and model convergence across smart city sensor networks.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "resources": {
+    "cpu": "1000m",
+    "memory": "512Mi"
+  }
+}

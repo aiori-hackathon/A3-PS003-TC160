@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.vite/
+
+# Environment variables & secrets (Strict Protection)
+.env
+.env.*
+.env*.local
+*.env
+*.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*secret*.json
+*credentials*.json
+*service-account*.json
+firebase-applet-config.json
+
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE & AI Tooling
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.agents/
+.aistudio/
+.claude/
+.gemini/
+skills/
+
+# Package managers
+bun.lock
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc & Archives
+*.hprof
+.coverage
+*-submission.zip
+
+
